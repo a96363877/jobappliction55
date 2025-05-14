@@ -11,8 +11,8 @@ const cairo = Cairo({
 })
 
 export const metadata: Metadata = {
-  title: "نموذج التقدم للوظيفة | شركة التقنية المتقدمة",
-  description: "نموذج احترافي للتقدم للوظيفة في شركة التقنية المتقدمة",
+  title: "نموذج التقدم للوظيفة",
+  description: "نموذج للتقدم للوظيفة في الشركة ",
 }
 
 export default function RootLayout({
