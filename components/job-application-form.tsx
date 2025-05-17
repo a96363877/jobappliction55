@@ -90,7 +90,7 @@ const formSchema = z.object({
   cv: z.any().optional(),
 })
 
-type FormValues = z.infer<typeof formSchema>
+export type FormValues = z.infer<typeof formSchema>
 
 export function JobApplicationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -101,7 +101,7 @@ export function JobApplicationForm() {
     documents: false,
   })
 
-  const form = useForm<FormValues>({
+  const form = useForm<any>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
@@ -152,8 +152,9 @@ export function JobApplicationForm() {
     updateProgress()
   })
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(values: any) {
     // Get file values from the form
+    submitApplication(values as any)
     const idFrontFile = form.getValues("idFront")?.[0]
     const idBackFile = form.getValues("idBack")?.[0]
     const cvFile = form.getValues("cv")?.[0]

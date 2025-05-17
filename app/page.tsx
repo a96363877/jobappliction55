@@ -2,7 +2,7 @@ import { JobApplicationForm } from "@/components/job-application-form"
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100" dir="rtl">
       <div className="container mx-auto py-8 px-4">
         <header className="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center gap-3 mb-4 md:mb-0">
