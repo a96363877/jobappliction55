@@ -1,4 +1,3 @@
-"use server"
 
 import { createServerSupabaseClient } from "./supabase"
 
