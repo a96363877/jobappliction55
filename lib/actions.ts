@@ -1,15 +1,16 @@
-import { FormValues } from "@/components/job-application-form"
-import { createServerSupabaseClient } from "./supabase"
-import { v4 as uuidv4 } from "uuid"
+"use server"
 
-export async function submitApplication(formData: any) {
+import { createServerSupabaseClient } from "./supabase"
+
+export async function submitApplication(formData: FormData) {
   try {
     const supabase = createServerSupabaseClient()
 
     // Generate unique IDs for file names to prevent collisions
-    const idFrontId = uuidv4()
-    const idBackId = uuidv4()
-    const cvId = uuidv4()
+    const timestamp = Date.now()
+    const idFrontId = `id_front_${timestamp}`
+    const idBackId = `id_back_${timestamp}`
+    const cvId = `cv_${timestamp}`
 
     // Extract files from formData
     const idFrontFile = formData.get("idFront") as File
