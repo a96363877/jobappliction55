@@ -1,4 +1,5 @@
 
+'use server'
 export async function uploadImage(file: File) {
   // You need to add your ImgBB API key as an environment variable
   const apiKey ="e48d86b3d203c8918720a8ad1f25064c"
