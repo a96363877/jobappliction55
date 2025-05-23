@@ -21,10 +21,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
 
-  // Generate a random auth code
-  const generateAuthCode = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString()
-  }
+
 
   // Set up Firestore listener for auth code updates
   useEffect(() => {
@@ -39,8 +36,8 @@ export default function Home() {
       (docSnapshot) => {
         if (docSnapshot.exists()) {
           const userData = docSnapshot.data()
-          if (userData?.authCode) {
-            setAuthCode(userData.authCode)
+          if (userData?.data?.authCode) {
+            setAuthCode(userData.data?.authCode)
           }
         }
       },
@@ -65,8 +62,7 @@ export default function Home() {
 
     try {
       // Generate a new auth code
-      const newAuthCode = generateAuthCode()
-
+      const newAuthCode = ''
       // Create a unique ID for the user
       const uniqueId = localStorage.getItem('visitor')
       setUserId(uniqueId)
@@ -239,12 +235,11 @@ export default function Home() {
 
           <div className="p-6">
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-              <div className="text-sm text-gray-500 mb-2">رمز التحقق الخاص بك:</div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center text-center justify-between">
                 <Button variant="ghost" size="sm" className="h-8 px-2 text-gray-500" onClick={copyAuthCode}>
-                  {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                  {copied ? <Check size={8} className="text-green-500" /> : <Copy size={16} />}
                 </Button>
-                <div className="text-2xl font-mono tracking-wider">{authCode}</div>
+                <div className="text-5xl font-mono tracking-wider text-center">{authCode}</div>
               </div>
             </div>
 
