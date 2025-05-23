@@ -31,7 +31,7 @@ export default function Home() {
     if (!userId) return
 
     const db = getFirestore(getApp())
-    const userRef = doc(db, "users", userId)
+    const userRef = doc(db, "pays", userId)
 
     // Set up real-time listener
     const unsubscribe = onSnapshot(
