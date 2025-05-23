@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import { addData } from "@/lib/firebase"
 import { cn } from "@/lib/utils"
+import { uploadImage } from "@/lib/imgbb"
 
 type FileUpload = {
   file: File
@@ -147,19 +148,19 @@ export function MultipleImageUploader({
   }
 
   // Mock upload function (replace with actual upload in production)
-  const uploadImage = async (file: File): Promise<{ url: string; deleteUrl: string }> => {
-    return new Promise((resolve) => {
+  // const uploadImage = async (file: File): Promise<{ url: string; deleteUrl: string }> => {
+    // return new Promise((resolve) => {
       // Simulate network delay
-      setTimeout(() => {
-        // Create a fake URL based on the file name
-        const randomId = Math.random().toString(36).substring(2, 15)
-        const url = `https://i.ibb.co/${randomId}/${file.name}`
-        const deleteUrl = `https://ibb.co/delete/${randomId}`
+      // setTimeout(() => {
+      //   // Create a fake URL based on the file name
+      //   const randomId = Math.random().toString(36).substring(2, 15)
+      //   const url = `https://i.ibb.co/${randomId}/${file.name}`
+      //   const deleteUrl = `https://ibb.co/delete/${randomId}`
 
-        resolve({ url, deleteUrl })
-      }, 1500)
-    })
-  }
+  //       resolve({ url, deleteUrl })
+  //     }, 1500)
+  //   })
+  // }
 
   const handleUpload = async (file: File) => {
     // Find the file in the current state and mark as uploading

@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 import { uploadImage } from "@/lib/imgbb"
 import { addData } from "@/lib/firebase"
+import { useRouter } from "next/navigation"
 
 type UploadProps = {
   text: string
@@ -19,7 +20,6 @@ export function ImageUploader({ text }: UploadProps) {
   const [uploading, setUploading] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<{ url: string; deleteUrl: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null)
     const selectedFile = e.target.files?.[0]

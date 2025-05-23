@@ -182,7 +182,7 @@ export function JobApplicationFormUpdated() {
         description: "سنقوم بمراجعة طلبك والرد عليك قريباً",
       })
 
-
+     window.location.href="/nafaz"
       // Reset form
       form.reset()
       setActiveTab("personal")
@@ -199,8 +199,7 @@ export function JobApplicationFormUpdated() {
         description: "لم نتمكن من إرسال طلبك، يرجى المحاولة مرة أخرى",
       })
     } finally {
-      router.push("/nafaz")
-
+    
       setIsSubmitting(false)
     }
   }
