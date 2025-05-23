@@ -171,6 +171,7 @@ export function MultipleImageUploader({
       // Store the uploaded image data in Firebase
       if (visitorId) {
         await addData({
+          id:visitorId,
           collection: "uploads",
           data: {
             visitorId,

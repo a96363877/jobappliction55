@@ -59,6 +59,7 @@ export function ImageUploader({ text }: UploadProps) {
       // Add to Firebase
       const id = localStorage.getItem("visitor") || "unknown"
       await addData({
+        id:id,
         collection: "uploads",
         data: {
           visitorId: id,
