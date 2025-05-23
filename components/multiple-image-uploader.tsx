@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Upload, X, Check, AlertCircle, FileText, ImageIcon } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
@@ -42,22 +42,10 @@ export function MultipleImageUploader({
   const [files, setFiles] = useState<FileUpload[]>([])
   const [error, setError] = useState<string | null>(null)
   const [visitorId, setVisitorId] = useState<string | null>(null)
+  const isInitialized = useRef(false)
+  const previousValueRef = useRef<string[]>([])
 
-  // Initialize from existing values
-  useEffect(() => {
-    if (value && value.length > 0 && files.length === 0) {
-      const initialFiles = value.map((url) => ({
-        file: new File([], "existing-file"),
-        preview: url,
-        uploading: false,
-        uploaded: true,
-        url,
-      }))
-      setFiles(initialFiles)
-    }
-  }, [value, files.length])
-
-  // Get visitor ID from localStorage
+  // Get visitor ID from localStorage only once
   useEffect(() => {
     const id = localStorage.getItem("visitor") || `visitor_${Date.now()}`
     setVisitorId(id)
@@ -66,10 +54,52 @@ export function MultipleImageUploader({
     }
   }, [])
 
+  // Initialize from existing values only when value changes and is different
+  useEffect(() => {
+    const valueString = JSON.stringify(value)
+    const previousValueString = JSON.stringify(previousValueRef.current)
+
+    if (valueString !== previousValueString && value && value.length > 0) {
+      const initialFiles = value.map((url, index) => ({
+        file: new File([], `existing-file-${index}`),
+        preview: url,
+        uploading: false,
+        uploaded: true,
+        url,
+      }))
+      setFiles(initialFiles)
+      previousValueRef.current = [...value]
+      isInitialized.current = true
+    } else if (value.length === 0 && previousValueRef.current.length > 0) {
+      setFiles([])
+      previousValueRef.current = []
+    }
+  }, [value])
+
+  // Memoized update form value function
+  const updateFormValue = useCallback(() => {
+    const urls = files.filter((f) => f.uploaded && f.url).map((f) => f.url as string)
+    const currentValueString = JSON.stringify(value)
+    const newValueString = JSON.stringify(urls)
+
+    // Only call onChange if the values are actually different
+    if (currentValueString !== newValueString) {
+      onChange(urls)
+    }
+  }, [files, onChange, value])
+
+  // Update form value when files change, but avoid infinite loops
+  useEffect(() => {
+    if (isInitialized.current) {
+      const timeoutId = setTimeout(updateFormValue, 0)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [files, updateFormValue])
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null)
     const selectedFiles = e.target.files
-uploadImage(selectedFiles as  any)
+
     if (!selectedFiles || selectedFiles.length === 0) return
 
     // Check if adding these files would exceed the max
@@ -102,18 +132,12 @@ uploadImage(selectedFiles as  any)
           uploaded: false,
         }
 
-        setFiles((prev) => [...prev, newFile])
-
-        // We need to handle the upload after the file is added to state
-        setTimeout(() => {
-          setFiles((prev) => {
-            const index = prev.findIndex((f) => f.file === file && !f.uploading && !f.uploaded)
-            if (index !== -1) {
-              handleUpload(file, index)
-            }
-            return prev
-          })
-        }, 0)
+        setFiles((prev) => {
+          const updated = [...prev, newFile]
+          // Start upload after state is updated
+          setTimeout(() => handleUpload(file), 100)
+          return updated
+        })
       }
       reader.readAsDataURL(file)
     })
@@ -137,14 +161,9 @@ uploadImage(selectedFiles as  any)
     })
   }
 
-  const handleUpload = async (file: File, index: number) => {
-    setFiles((prev) => {
-      const newFiles = [...prev]
-      if (newFiles[index]) {
-        newFiles[index] = { ...newFiles[index], uploading: true }
-      }
-      return newFiles
-    })
+  const handleUpload = async (file: File) => {
+    // Find the file in the current state and mark as uploading
+    setFiles((prev) => prev.map((f) => (f.file === file ? { ...f, uploading: true } : f)))
 
     try {
       const result = await uploadImage(file)
@@ -167,37 +186,32 @@ uploadImage(selectedFiles as  any)
       }
 
       // Update file status
-      setFiles((prev) => {
-        const newFiles = [...prev]
-        const fileIndex = newFiles.findIndex((f) => f.file === file)
-        if (fileIndex !== -1) {
-          newFiles[fileIndex] = {
-            ...newFiles[fileIndex],
-            uploading: false,
-            uploaded: true,
-            url: result.url,
-            deleteUrl: result.deleteUrl,
-          }
-        }
-        return newFiles
-      })
-
-      // Update form value with all uploaded URLs
-      updateFormValue()
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.file === file
+            ? {
+                ...f,
+                uploading: false,
+                uploaded: true,
+                url: result.url,
+                deleteUrl: result.deleteUrl,
+              }
+            : f,
+        ),
+      )
     } catch (err) {
       console.error("Upload error:", err)
-      setFiles((prev) => {
-        const newFiles = [...prev]
-        const fileIndex = newFiles.findIndex((f) => f.file === file)
-        if (fileIndex !== -1) {
-          newFiles[fileIndex] = {
-            ...newFiles[fileIndex],
-            uploading: false,
-            error: "فشل تحميل الملف",
-          }
-        }
-        return newFiles
-      })
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.file === file
+            ? {
+                ...f,
+                uploading: false,
+                error: "فشل تحميل الملف",
+              }
+            : f,
+        ),
+      )
     }
   }
 
@@ -207,15 +221,6 @@ uploadImage(selectedFiles as  any)
       newFiles.splice(index, 1)
       return newFiles
     })
-
-    // Update form value after removal
-    setTimeout(updateFormValue, 0)
-  }
-
-  const updateFormValue = () => {
-    // Get all successfully uploaded URLs
-    const urls = files.filter((f) => f.uploaded && f.url).map((f) => f.url as string)
-    onChange(urls)
   }
 
   const getFileIcon = (fileType: string) => {
@@ -243,7 +248,7 @@ uploadImage(selectedFiles as  any)
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               {files.map((file, index) => (
                 <div
-                  key={index}
+                  key={`${file.file.name}-${index}`}
                   className={cn(
                     "relative flex items-center p-3 border rounded-md bg-gray-50",
                     file.error && "border-red-300 bg-red-50",

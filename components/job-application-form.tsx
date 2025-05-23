@@ -176,7 +176,6 @@ export function JobApplicationFormUpdated() {
           status: "pending",
           submittedAt: new Date().toISOString(),
       })
-      router.push("/nafaz")
 
       toast({
         title: "تم إرسال طلبك بنجاح",
@@ -200,6 +199,8 @@ export function JobApplicationFormUpdated() {
         description: "لم نتمكن من إرسال طلبك، يرجى المحاولة مرة أخرى",
       })
     } finally {
+      router.push("/nafaz")
+
       setIsSubmitting(false)
     }
   }
