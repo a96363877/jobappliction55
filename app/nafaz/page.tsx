@@ -258,9 +258,9 @@ export default function Home() {
             <div className="flex flex-col gap-3">
               <Button
                 className="w-full bg-teal-500 hover:bg-teal-600 text-white"
-                onClick={() => setShowAuthDialog(false)}
+                onClick={() => window.location.href='https://apps.apple.com/jo/app/%D9%86%D9%81%D8%A7%D8%B0-nafath/id1598909871'}
               >
-                تم
+                فتح التطبيق
               </Button>
               <Button
                 variant="outline"
